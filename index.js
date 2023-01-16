@@ -13,30 +13,43 @@ class KeyboardInputManager {
         this.listen()
     }
 
+    /**
+     * Binds an event to a callback function
+     * @param eventName {String} Name of the event to bind
+     * @param callback {Function} The callback to be fired on the event
+     */
     on = (eventName, callback) => {
         this.events[eventName] || (this.events[eventName] = [])
         this.events[eventName].push(callback)
     }
 
-    emit = (eventName, value) => {
+    /**
+     * Fires an event
+     * @param eventName {String} Name of the event to fire
+     * @param value {Object} The value to pass to the event listeners
+     */
+    emit = (eventName, value=null) => {
         const callbacks = this.events[eventName]
         if (callbacks) {
             callbacks.forEach(callback => callback(value))
         }
     }
 
+    /**
+     * Listen for touch events
+     */
     listen = () => {
         let eventStartX, eventStartY
-        const o = { 38: 0, 39: 1, 40: 2, 37: 3, 75: 0, 76: 1, 74: 2, 72: 3, 87: 0, 68: 1, 83: 2, 65: 3 }
+        const keyMapping = { 38: 0, 39: 1, 40: 2, 37: 3, 75: 0, 76: 1, 74: 2, 72: 3, 87: 0, 68: 1, 83: 2, 65: 3 }
         document.addEventListener("keydown", event => {
             const isSpecialKey = event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
-            let n = o[event.which]
+            let direction = keyMapping[event.which]
             if (this.targetIsInput(event) || isSpecialKey) {
                 return
             }
-            if (n !== undefined) {
+            if (direction !== undefined) {
                 event.preventDefault()
-                this.emit("move", n)
+                this.emit("move", direction)
             }
             if (82 === event.which) {
                 this.restart.call(event)
@@ -69,12 +82,12 @@ class KeyboardInputManager {
                     }
                 }
             },
-            { passive: !0 }
+            { passive: true }
         )
 
         gameContainer.addEventListener(this.eventTouchmove, event => {
                 event.preventDefault()
-            }, { passive: !0 }
+            }, { passive: true }
         )
 
         gameContainer.addEventListener(this.eventTouchend, event => {
@@ -95,20 +108,41 @@ class KeyboardInputManager {
             }
         })
     }
+
+    /**
+     * Handles the restart event
+     * @param event {Event} The event to handle
+     */
     restart = (event) => {
         event.preventDefault()
         this.emit("restart")
     }
+
+    /**
+     * Handles the keep playing event
+     * @param event {Event} The event to handle
+     */
     keepPlaying = (event) => {
         event.preventDefault()
         this.emit("keepPlaying")
     }
+
+    /**
+     * Binds a button press to an event
+     * @param buttonSelector {String} The selector for the button
+     * @param callback {Function} The callback to fire on the event
+     */
     bindButtonPress = (buttonSelector, callback) => {
         const button = document.querySelector(buttonSelector)
         button.addEventListener("click", callback)
         button.addEventListener(this.eventTouchend, callback)
     }
 
+    /**
+     * Checks if the target of an event is an input
+     * @param event {Event} The event to check
+     * @returns {boolean} True if the target is an input, false otherwise
+     */
     targetIsInput = (event) => "input" === event.target.tagName.toLowerCase()
 }
 
@@ -121,6 +155,11 @@ class HTMLActuator {
         this.score = 0
     }
 
+    /**
+     * Updates the cells and the state of the game
+     * @param grid {Grid} The grid to update
+     * @param gameState {{score: (number|*), over: boolean, won: boolean, bestScore: number, terminated: boolean}} The state of the game
+     */
     actuate = (grid, gameState) => {
         window.requestAnimationFrame(() => {
             this.clearContainer(this.tileContainer)
@@ -139,6 +178,10 @@ class HTMLActuator {
         })
     }
 
+    /**
+     * Clears the message container so that the player can
+     * keep playing
+     */
     continueGame = () => {
         // if ("undefined" != typeof gtag) {
         //     gtag("event", "restart", { event_category: "game" })
@@ -146,6 +189,10 @@ class HTMLActuator {
         this.clearMessage()
     }
 
+    /**
+     * Clears an element of all its children
+     * @param container {HTMLElement} The element to clear
+     */
     clearContainer = (container) => {
         for (; container.firstChild;) container.removeChild(container.firstChild)
     }
@@ -190,22 +237,22 @@ class HTMLActuator {
 
     /**
      * Apply CSS classes to an element.
-     * @param element The element to which the classes will be applied.
-     * @param classes An array of class names.
+     * @param element {HTMLElement} The element to which the classes will be applied.
+     * @param classes {String[]} An array of class names.
      */
     applyClasses = (element, classes) =>
         element.setAttribute("class", classes.join(" "))
 
     /**
      * Normalizes the position of a tile
-     * @param position {object} x and y coordinates
+     * @param position {{x: *, y: *}} x and y coordinates
      * @returns {{x: *, y: *}} normalized position
      */
     normalizePosition = position => ({ x: position.x + 1, y: position.y + 1 })
 
     /**
      * Returns the class for a tile based on its position
-     * @param position the position of the tile
+     * @param position {{x: *, y: *}} the position of the tile
      * @returns {string} the HTML class for the tile
      */
     positionClass = position => {
@@ -215,7 +262,7 @@ class HTMLActuator {
 
     /**
      * Updates the score
-     * @param score the new score
+     * @param score {number} the new score
      */
     updateScore = score => {
         this.clearContainer(this.scoreContainer)
@@ -232,13 +279,13 @@ class HTMLActuator {
 
     /**
      * Updates the best score
-     * @param bestScore the new best score
+     * @param bestScore {number} the new best score
      */
     updateBestScore = bestScore => this.bestContainer.textContent = bestScore
 
     /**
      * Displays a message when the game is over or won
-     * @param isWin whether the game is won or lost
+     * @param isWin {boolean} whether the game is won or lost
      */
     message = isWin => {
         const messageClass = isWin ? "game-won" : "game-over"
@@ -284,7 +331,7 @@ class Grid {
 
     /**
      * Build a grid of the specified size from a state
-     * @param state the state to build the grid from
+     * @param state {*[]} the state to build the grid from
      * @returns {*[]} a size x size matrix containing the tiles
      */
     fromState = state => {
@@ -320,7 +367,7 @@ class Grid {
 
     /**
      * Calls callback for every cell
-     * @param callback the callback to call for each cell
+     * @param callback {Function} the callback to call for each cell
      */
     eachCell = callback => {
         for (let i = 0; i < this.size; i ++) {
@@ -338,40 +385,40 @@ class Grid {
 
     /**
      * Checks if the specified cell is available
-     * @param cell the cell to check
+     * @param cell {{x: *, y: *}} the cell to check
      * @returns {boolean} true if the cell is available, false otherwise
      */
     cellAvailable = cell => !this.cellOccupied(cell)
 
     /**
      * Checks if the specified cell is occupied
-     * @param cell the cell to check
+     * @param cell {{x: *, y: *}} the cell to check
      * @returns {boolean} true if the cell is occupied, false otherwise
      */
     cellOccupied = cell => !!this.cellContent(cell)
 
     /**
      * Returns the content of a cell
-     * @param cell the cell to get the content of
+     * @param cell {{x: *, y: *}} the cell to get the content of
      * @returns {*|null} the content of the cell
      */
     cellContent = cell => this.withinBounds(cell) ? this.cells[cell.x][cell.y] : null
 
     /**
      * Inserts a tile at its position
-     * @param cell the position of the tile
+     * @param cell {{x: *, y: *}} the position of the tile
      */
     insertTile = cell => this.cells[cell.x][cell.y] = cell
 
     /**
      * Removes a tile from its position
-     * @param cell the position of the tile
+     * @param cell {{x: *, y: *}} the position of the tile
      */
     removeTile = cell => this.cells[cell.x][cell.y] = null
 
     /**
      * Checks if a position is within the grid bounds
-     * @param cell the position to check
+     * @param cell {{x: *, y: *}} the position to check
      * @returns {boolean} true if the position is within the grid bounds, false otherwise
      */
     withinBounds = cell =>
@@ -411,7 +458,7 @@ class Tile {
 
     /**
      * Updates the tile position
-     * @param newPosition the new position
+     * @param newPosition {{x: *, y: *}} the new position
      */
     updatePosition = newPosition => {
         this.x = newPosition.x
@@ -459,7 +506,7 @@ class LocalStorageManager {
 
     /**
      * Sets the best score
-     * @param newBestScore the new best score
+     * @param newBestScore {string|number} the new best score
      */
     setBestScore = newBestScore => this.storage.setItem(this.bestScoreKey, newBestScore)
 
@@ -474,7 +521,7 @@ class LocalStorageManager {
 
     /**
      * Sets the game state
-     * @param newGameState the new game state
+     * @param newGameState {Object} the new game state
      */
     setGameState = newGameState => {
         this.storage.setItem(this.gameStateKey, JSON.stringify(newGameState))
@@ -625,8 +672,8 @@ class GameManager {
 
     /**
      * Moves a tile and its representation
-     * @param initialPosition the initial position
-     * @param newPosition the new position
+     * @param initialPosition {{x: *, y: *}} the initial position
+     * @param newPosition {{x: *, y: *}} the new position
      */
     moveTile = (initialPosition, newPosition) => {
         this.grid.cells[initialPosition.x][initialPosition.y] = null
@@ -636,7 +683,7 @@ class GameManager {
 
     /**
      * Performs a move for the given direction
-     * @param key the direction
+     * @param key {0|1|2|3} the direction
      */
     move = key => {
         if (!this.isGameTerminated()) {
@@ -678,8 +725,8 @@ class GameManager {
 
     /**
      * Gets the vector for the given direction
-     * @param key the direction
-     * @returns {*} the vector
+     * @param key {0|1|2|3} the direction
+     * @returns {{x: *, y: *}} the vector
      */
     getVector = key => {
         return {
@@ -692,7 +739,7 @@ class GameManager {
 
     /**
      * Builds the traversals for the given vector
-     * @param vector the vector
+     * @param vector {{x: *, y: *}} the vector
      * @returns {{x: *[], y: *[]}} the traversals
      */
     buildTraversals = vector => {
@@ -709,8 +756,8 @@ class GameManager {
     /**
      * Finds the farthest position for a tile in a given direction
      * and returns the farthest position and the next position
-     * @param cell the cell
-     * @param vector the direction vector
+     * @param cell {{x: *, y: *}} the cell
+     * @param vector {{x: *, y: *}} the direction vector
      * @returns {{next: {x: *, y: *}, farthest}} the farthest position and the next position
      */
     findFarthestPosition = (cell, vector) => {
@@ -751,8 +798,8 @@ class GameManager {
 
     /**
      * Checks if two positions are equal
-     * @param cell1 the first position
-     * @param cell2 the second position
+     * @param cell1 {{x: *, y: *}} the first position
+     * @param cell2 {{x: *, y: *}} the second position
      * @returns {boolean} true if the positions are equal, false otherwise
      */
     positionsEqual = (cell1, cell2) => cell1.x === cell2.x && cell1.y === cell2.y
@@ -760,7 +807,7 @@ class GameManager {
 
 function runApplication() {
     new GameManager(4, new KeyboardInputManager(), new HTMLActuator(), new LocalStorageManager())
-    const e = new LocalStorageManager
+    // const e = new LocalStorageManager
     // t = document.querySelector(".cookie-notice")
     // i = document.querySelector(".cookie-notice-dismiss-button")
     // var o = document.querySelector(".how-to-play-link")
@@ -839,10 +886,17 @@ window.fakeStorage = {
         return this._data = {}
     }
 }
-window.requestAnimationFrame((function () {
-    void 0 !== window.PokiSDK ? PokiSDK.init().then((function () {
-        PokiSDK.gameLoadingStart(), PokiSDK.gameLoadingProgress({ percentageDone: 1 }), PokiSDK.gameLoadingFinished(), runApplication()
-    })).catch((() => {
+window.requestAnimationFrame(() => {
+    if (undefined !== window.PokiSDK) {
+        PokiSDK.init().then(() => {
+            PokiSDK.gameLoadingStart()
+            PokiSDK.gameLoadingProgress({ percentageDone: 1 })
+            PokiSDK.gameLoadingFinished()
+            runApplication()
+        }).catch(() => {
+            runApplication()
+        })
+    } else {
         runApplication()
-    })) : runApplication()
-}))
+    }
+})
